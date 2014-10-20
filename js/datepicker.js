@@ -444,7 +444,16 @@
           return this[fullName ? 'months' : 'monthsShort'][this.getMonth()];
         };
         Date.prototype.addDays = function (n) {
-          this.setDate(this.getDate() + n);
+          var diff, tzOff, tzOff2, t;
+          tzOff = this.getTimezoneOffset() * 60 * 1000;
+          t = this.getTime() + n * 1000 * 60 * 60 * 24;
+          this.setTime(t);
+          tzOff2 = this.getTimezoneOffset() * 60 * 1000;
+          if (tzOff !== tzOff2) {
+            diff = tzOff2 - tzOff;
+            t += diff;
+            this.setTime(t);
+          }
           this.tempDate = this.getDate();
         };
         Date.prototype.addMonths = function (n) {
