@@ -444,16 +444,29 @@
           return this[fullName ? 'months' : 'monthsShort'][this.getMonth()];
         };
         Date.prototype.addDays = function (n) {
-          var diff, tzOff, tzOff2, t;
+          // Adds time to self so that the day will move n times in any direction
+          // Will try to keep the time unchanged, but due to DST changes it may not be possible
+          // In that case, it will make sure the date is correct, but the time may be offset
+          // by a hour in any direction
+          var diff, tzOff, tzOff2, t, dateStr;
+
           tzOff = this.getTimezoneOffset() * 60 * 1000;
+          dateStr = this.getFullYear() + this.getMonth() + this.getDate();
+
           t = this.getTime() + n * 1000 * 60 * 60 * 24;
           this.setTime(t);
+
           tzOff2 = this.getTimezoneOffset() * 60 * 1000;
+
           if (tzOff !== tzOff2) {
             diff = tzOff2 - tzOff;
-            t += diff;
-            this.setTime(t);
+            this.setTime(t + diff);
+            if("" + this.getFullYear() + this.getMonth() + this.getDate() === dateStr) {
+              // Oops, we went back to previous timezone offset again while compensating
+              this.setTime(t);
+            }
           }
+
           this.tempDate = this.getDate();
         };
         Date.prototype.addMonths = function (n) {
