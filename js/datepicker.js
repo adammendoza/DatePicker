@@ -303,6 +303,12 @@
         lastSel: false
       },
 
+      getDateString = function(date) {
+        var m = date.getMonth() + 1;
+        var d = date.getDate();
+        return "" + date.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (d < 10 ? '0' + d : d);
+      }
+
       /**
        * Internal method which renders the calendar cells
        *
@@ -359,12 +365,12 @@
               classname: []
             };
             var today = new Date();
-            if (today.getDate() == date.getDate() && today.getMonth() == date.getMonth() && today.getYear() == date.getYear()) {
+            if (getDateString(today) == getDateString(date)) {
               data.weeks[indic].days[indic2].classname.push('datepickerToday');
             }
             if($.isArray(options.selectableDates) && options.selectableDates.length == 2) {
-              var beforeSelectableDates = options.selectableDates[0] && date < options.selectableDates[0];
-              var afterSelectableDates = options.selectableDates[1] && date > options.selectableDates[1];
+              var beforeSelectableDates = options.selectableDates[0] && getDateString(date) < getDateString(options.selectableDates[0]);
+              var afterSelectableDates = options.selectableDates[1] && getDateString(date) > getDateString(options.selectableDates[1]);
               if (beforeSelectableDates || afterSelectableDates) {
                 data.weeks[indic].days[indic2].classname.push('datepickerFuture');
                 data.weeks[indic].days[indic2].classname.push('datepickerDisabled');
@@ -389,7 +395,7 @@
               data.weeks[indic].days[indic2].classname.push('datepickerSaturday');
             }
             var fromUser = options.onRenderCell(el, date);
-            var val = date.valueOf();
+            var val = getDateString(date);
             if(options.date && (!$.isArray(options.date) || options.date.length > 0)) {
               if (options.mode != 'tworanges') {
                 var isCurrentDate = options.date == val;
@@ -451,7 +457,7 @@
           var diff, tzOff, tzOff2, t, dateStr;
 
           tzOff = this.getTimezoneOffset() * 60 * 1000;
-          dateStr = this.getFullYear() + this.getMonth() + this.getDate();
+          dateStr = getDateString(this);
 
           t = this.getTime() + n * 1000 * 60 * 60 * 24;
           this.setTime(t);
@@ -461,7 +467,7 @@
           if (tzOff !== tzOff2) {
             diff = tzOff2 - tzOff;
             this.setTime(t + diff);
-            if("" + this.getFullYear() + this.getMonth() + this.getDate() === dateStr) {
+            if(getDateString(this) === dateStr) {
               // Oops, we went back to previous timezone offset again while compensating
               this.setTime(t);
             }
@@ -562,10 +568,9 @@
                   var offset = (options.lastSel > 1) ? 2 : 0;
                   var nextSel = (options.lastSel > 1) ? 0 : 2;
                   // range, select the whole month
-                  options.date[offset] = (tmp.setHours(0,0,0,0)).valueOf();
-                  tmp.addDays(tmp.getMaxDays()-1);
-                  tmp.setHours(23,59,59,999);
-                  options.date[offset+1] = tmp.valueOf();
+                  options.date[offset] = getDateString(tmp);
+                  tmp.addDays(tmp.getMaxDays());
+                  options.date[offset+1] = getDateString(tmp);
                   fillIt = true;
                   changed = true;
                   options.lastSel = nextSel;
@@ -579,6 +584,7 @@
                     endDate = options.selectableDates[1];
                   }
 
+                  // TODO: this part still applicable to bugs caused by DST changes
                   tmpStart.setHours(0,0,0,0);
                   tmpStart.setDate(1);
 
@@ -587,25 +593,24 @@
                       tmpStart.setTime(baseDate.getTime());
                     }
                   }
-                  options.date[0] = tmpStart.valueOf();
+                  options.date[0] = getDateString(tmpStart);
 
                   // Check if the end date is allowed
                   tmpEnd.setDate(tmpEnd.getMaxDays());
-                  tmpEnd.setHours(23,59,59,999);
 
                   if (options.selectableDates != null && endDate) {
                     if (tmpEnd.getTime() > endDate.getTime()){
                       tmpEnd.setTime(endDate.getTime());
                     }
                   }
-                  options.date[1] = tmpEnd.valueOf();
+                  options.date[1] = getDateString(tmpEnd);
 
                   if (options.selectableDates != null) {
                     var beforeLimitRange = baseDate && tmpEnd.getTime() < baseDate.getTime();
                     var afterLimitRange = endDate && tmpStart.getTime() > endDate.getTime();
                     if (beforeLimitRange || afterLimitRange) {
-                      options.date[0] = 0;
-                      options.date[1] = 0;
+                      options.date[0] = null;
+                      options.date[1] = null;
                     }
                   }
                   if (!options.date[0] && !options.date[1]) {
@@ -687,16 +692,19 @@
               options.current.setFullYear(parseInt(el.text(), 10));
               tblEl.eq(0).toggleClass('datepickerViewYears datepickerViewMonths');
             } else {
-              // clicked a day cell
+                // clicked a day cell
                 var val = parseInt(el.text(), 10);
                 tmp.addMonths(tblIndex - currentCal);
                 if (parentEl.hasClass('datepickerNotInMonth')) {
                   tmp.addMonths(val > 15 ? -1 : 1);
                 }
                 tmp.setDate(val);
+                if(tmp.getDate() != val) {
+                  tmp.setTime(tmp.getTime() + 1000 * 60 * 60 * (val - tmp.getDate()));
+                }
                 switch (options.mode) {
                   case 'multiple':
-                    val = (tmp.setHours(0,0,0,0)).valueOf();
+                    val = getDateString(tmp);
                     if ($.inArray(val, options.date) > -1) {
                       $.each(options.date, function(nr, dat){
                         if (dat == val) {
@@ -718,17 +726,19 @@
                     var first = mapping_first[options.lastSel];
                     var second = first + 1;
                     if (options.weeklyMode) {
+                      // TODO: this part still applicable to bugs caused by DST changes
                       var day = tmp.getDay();
                       var diff = (day == 0 ? -6 : 1) - day;
                       var monday = new Date(tmp.getTime() + diff * 24 * 3600000); // return closest monday
                       var sunday = new Date(monday.getTime() + 6 * 24 * 3600000); // return next sunday
                       changedRange = true;
-                      options.date[first] = (monday.setHours(0, 0, 0, 0)).valueOf();
-                      options.date[second] = (sunday.setHours(23, 59, 59, 999)).valueOf();
+                      options.date[first] = getDateString(monday);
+                      options.date[second] = getDateString(sunday);
                       var modulo = options.mode == 'range' ? 2 : 4;
                       options.lastSel = (current + 2) % modulo;
                     }
                     else if (options.monthlyMode) {
+                      // TODO: this part still applicable to bugs caused by DST changes
                       tmp.setDate(1);
                       var year = tmp.getFullYear();
                       var month = tmp.getMonth() + 1;
@@ -739,23 +749,21 @@
                       var firstDayNextMonth = new Date(year, month, 1, 23, 59, 59, 999);
                       var lastMonthDate = new Date(firstDayNextMonth.getTime() - 24 * 3600000); // return last day of this month
                       changedRange = true;
-                      options.date[first] = (tmp.setHours(0, 0, 0, 0)).valueOf();
-                      options.date[second] = lastMonthDate.valueOf();
+                      options.date[first] = getDateString(tmp);
+                      options.date[second] = getDateString(lastMonthDate);
                       var modulo = options.mode == 'range' ? 2 : 4;
                       options.lastSel = (current + 2) % modulo;
                     }
                     else {
                       if (current == first) {
-                        // first click: set to the start of the day
-                        options.date[first] = (tmp.setHours(0, 0, 0, 0)).valueOf();
+                        options.date[first] = getDateString(tmp);
                       }
-                      // get the very end of the day clicked
-                      val = (tmp.setHours(23, 59, 59, 999)).valueOf();
+                      val = getDateString(tmp);
 
                       if (val < options.date[other]) {
                         // second range click < first
-                        options.date[second] = options.date[first] + 86399000;  // starting date + 1 day
-                        options.date[first] = val - 86399999;  // minus 1 day
+                        options.date[second] = options.date[first];
+                        options.date[first] = val;
                       } else {
                         // initial range click, or final range click >= first
                         options.date[second] = val;
@@ -767,7 +775,7 @@
                     }
                     break;
                   default:
-                    options.date = tmp.valueOf();
+                    options.date = getDateString(tmp);
                     break;
                 }
               changed = true;
@@ -804,11 +812,29 @@
       prepareDate = function (options) {
         var dates = null;
         if (options.mode == 'single') {
-          if(options.date) dates = new Date(options.date);
+          if(options.date) {
+            var d = new Date(options.date);
+            d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000); // All date strings are in user's timezone
+            dates = d;
+          }
         } else {
           dates = new Array();
           $(options.date).each(function(i, val){
-            dates.push(new Date(val));
+            var d = new Date(val);
+            d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000); // All date strings are in user's timezone
+            if(i % 2 == 1) {
+              // If date is range endpoint it should point to the day's last ms (24h - 1ms)
+              // however, if the day's last hour is DST change in fwd direction, we accidentally move to the next day.
+              // In that case, add less time (by 1h) with each iteration until we get the correct date
+              var t = d.getTime();
+              var morningDate = d.getDate();
+              var addHours = 24;
+              do {
+                d.setTime(t + addHours * 60 * 60 * 1000 - 1);
+                addHours -= 1;
+              } while(d.getDate() !== morningDate)
+            }
+            dates.push(d);
           });
         }
         return [dates, options.el];
@@ -947,24 +973,24 @@
             // Create a standardized date depending on the calendar mode
             if (mode != 'single') {
               if (!$.isArray(date)) {
-                date = [((new Date(date)).setHours(0,0,0,0)).valueOf()];
+                date = [getDateString(new Date(date))];
                 if (mode == 'range') {
                   // create a range of one day
-                  date.push(((new Date(date[0])).setHours(23,59,59,999)).valueOf());
+                  date.push(getDateString(new Date(date[0])));
                 }
               } else {
                 for (var i = 0; i < date.length; i++) {
-                  date[i] = ((new Date(date[i])).setHours(0,0,0,0)).valueOf();
+                  date[i] = getDateString(new Date(date[i]));
                 }
                 if (mode == 'range') {
                   // for range mode, create the other end of the range
-                  if(date.length == 1) date.push(new Date(date[0]));
-                  date[1] = ((new Date(date[1])).setHours(23,59,59,999)).valueOf();
+                  if(date.length == 1) date.push(getDateString(new Date(date[0])));
+                  date[1] = getDateString(new Date(date[1]));
                 }
               }
             } else {
               // mode is single, convert date object into a timestamp
-              date = ((new Date(date)).setHours(0,0,0,0)).valueOf();
+              date = getDateString(new Date(date));
             }
             // at this point date is either a timestamp at hour zero
             //  for 'single' mode, an array of timestamps at hour zero for
@@ -1042,9 +1068,9 @@
               $(this).bind(options.showOn, show);
             }
           }
-		  if (/range/.test(options.mode)) {
-		    cal.addClass('selectableRange');
-		  }
+      if (/range/.test(options.mode)) {
+        cal.addClass('selectableRange');
+      }
         });
       },
 
@@ -1122,7 +1148,7 @@
        * @return array where the first element is the selected date(s)  When calendar mode  is 'single' this
        *        is a single date object, or null if no date is selected.  When calendar mode is 'range', this is an array containing
        *        a 'from' and 'to' date objects, or the empty array if no date range is selected.  When calendar mode is 'multiple' this
-       *       	is an array of Date objects, or the empty array if no date is selected.
+       *        is an array of Date objects, or the empty array if no date is selected.
        *        The second element is the HTMLElement that DatePicker was invoked upon
        *
        * @see DatePickerGetDate()
@@ -1170,42 +1196,42 @@
         });
       },
 
-	  /**
-	   * Returns options.lastSel
-	   */
-	  getLastSel: function() {
-		var cal = $('#' + $(this).data('datepickerId'));
-		var options = cal.data('datepicker');
-		return options.lastSel;
-	  },
+      /**
+       * Returns options.lastSel
+       */
+      getLastSel: function() {
+        var cal = $('#' + $(this).data('datepickerId'));
+        var options = cal.data('datepicker');
+        return options.lastSel;
+      },
 
-	  /**
-	   * Sets options.lastSel
-	   */
-	  setLastSel: function(lastSel) {
-		var cal = $('#' + $(this).data('datepickerId'));
-		var options = cal.data('datepicker');
-		options.lastSel = parseInt(lastSel);
-	  },
+      /**
+       * Sets options.lastSel
+       */
+      setLastSel: function(lastSel) {
+        var cal = $('#' + $(this).data('datepickerId'));
+        var options = cal.data('datepicker');
+        options.lastSel = parseInt(lastSel);
+      },
 
-	  /**
-	   * Returns options.mode
-	   */
-	  getMode: function() {
-		var cal = $('#' + $(this).data('datepickerId'));
-		var options = cal.data('datepicker');
-		return options.mode;
-	  },
+      /**
+       * Returns options.mode
+       */
+      getMode: function() {
+        var cal = $('#' + $(this).data('datepickerId'));
+        var options = cal.data('datepicker');
+        return options.mode;
+      },
 
-	  /**
-	   * Sets options.mode
-	   */
-	  setMode: function(mode) {
-		var cal = $('#' + $(this).data('datepickerId'));
-		var options = cal.data('datepicker');
-		options.mode = mode;
-		fill(cal);
-	  }
+      /**
+       * Sets options.mode
+       */
+      setMode: function(mode) {
+        var cal = $('#' + $(this).data('datepickerId'));
+        var options = cal.data('datepicker');
+        options.mode = mode;
+        fill(cal);
+      }
     };
   }();  // DatePicker
 
@@ -1217,10 +1243,10 @@
     DatePickerSetDate: DatePicker.setDate,
     DatePickerGetDate: DatePicker.getDate,
     DatePickerClear: DatePicker.clear,
-	DatePickerGetLastSel: DatePicker.getLastSel,
-	DatePickerSetLastSel: DatePicker.setLastSel,
-	DatePickerGetMode: DatePicker.getMode,
-	DatePickerSetMode: DatePicker.setMode,
+    DatePickerGetLastSel: DatePicker.getLastSel,
+    DatePickerSetLastSel: DatePicker.setLastSel,
+    DatePickerGetMode: DatePicker.getMode,
+    DatePickerSetMode: DatePicker.setMode,
     DatePickerLayout: DatePicker.fixLayout
   });
 
