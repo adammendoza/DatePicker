@@ -303,6 +303,14 @@
         lastSel: false
       },
 
+
+      /**
+       * Internal method to serialize a Date to a date-level string format that can be used instead of
+       * comparing Date objects directly (we don't want to compare times, only dates)
+       *
+       * @param  Date date The date object to serialize
+       * @return String a binary-comparable date representation in the user's timezone
+       */
       getDateString = function(date) {
         var m = date.getMonth() + 1;
         var d = date.getDate();
