@@ -823,7 +823,6 @@
           if(options.date) {
             var comp = options.date.split('-');
             var d = new Date(+comp[0], +comp[1]-1, +comp[2]);
-            d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000); // All date strings are in user's timezone
             dates = d;
           }
         } else {
@@ -831,7 +830,6 @@
           $(options.date).each(function(i, val){
             var comp = val.split('-');
             var d = new Date(+comp[0], +comp[1]-1, +comp[2]);
-            d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000); // All date strings are in user's timezone
             if(i % 2 == 1) {
               // If date is range endpoint it should point to the day's last ms (24h - 1ms)
               // however, if the day's last hour is DST change in fwd direction, we accidentally move to the next day.
