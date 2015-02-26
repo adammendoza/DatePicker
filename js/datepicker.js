@@ -822,7 +822,7 @@
         if (options.mode == 'single') {
           if(options.date) {
             var comp = options.date.split('-');
-            var d = new Date(+comp[0], +comp[1], +comp[2]);
+            var d = new Date(+comp[0], +comp[1]-1, +comp[2]);
             d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000); // All date strings are in user's timezone
             dates = d;
           }
@@ -830,7 +830,7 @@
           dates = new Array();
           $(options.date).each(function(i, val){
             var comp = val.split('-');
-            var d = new Date(+comp[0], +comp[1], +comp[2]);
+            var d = new Date(+comp[0], +comp[1]-1, +comp[2]);
             d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000); // All date strings are in user's timezone
             if(i % 2 == 1) {
               // If date is range endpoint it should point to the day's last ms (24h - 1ms)
