@@ -990,10 +990,9 @@
                 for (var i = 0; i < date.length; i++) {
                   date[i] = getDateString(new Date(date[i]));
                 }
-                if (mode == 'range') {
-                  // for range mode, create the other end of the range
-                  if(date.length == 1) date.push(getDateString(new Date(date[0])));
-                  date[1] = getDateString(new Date(date[1]));
+                // for range mode, create the other end of the range if missing
+                if (mode == 'range' && date.length === 1) {
+                  date.push(date[0]);
                 }
               }
             } else {
